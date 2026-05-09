@@ -2,8 +2,10 @@ name: unified-multi-agent
 
 services:
   # --- SQL Database (Warehouse + Checkpoints + Prompts + Conversations) ---
+  # Custom image with warehouse_db schema + data baked in.
+  # Pull from Docker Hub: ranaankur39/multiagent-postgres:latest
   sql-postgres:
-    image: postgres:16-alpine
+    image: ranaankur39/multiagent-postgres:latest
     container_name: unified-sql-postgres
     environment:
       POSTGRES_DB: warehouse_db
@@ -22,8 +24,10 @@ services:
     restart: unless-stopped
 
   # --- Redis Stack (Cache + Vector Search) ---
+  # Custom image with RDB snapshot baked in.
+  # Pull from Docker Hub: ranaankur39/multiagent-redis:latest
   redis:
-    image: redis/redis-stack:latest
+    image: ranaankur39/multiagent-redis:latest
     container_name: unified-redis
     ports:
       - '6379:6379'
@@ -48,6 +52,23 @@ services:
       - '5050:80'
     depends_on:
       - sql-postgres
+    restart: unless-stopped
+
+  # --- FastAPI Application ---
+  # Pull from Docker Hub: ranaankur39/multiagent-app:latest
+  # Requires a .env file in the project root (see .env.example).
+  app:
+    image: ranaankur39/multiagent-app:latest
+    container_name: unified-app
+    ports:
+      - '8000:8000'
+    env_file:
+      - ../.env
+    depends_on:
+      sql-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

@@ -1,0 +1,17 @@
+# ============================================================================
+# Custom Redis Stack image with RDB snapshot baked in
+# Base: redis/redis-stack:latest
+# The dump.rdb is copied to /data/ so Redis loads it on startup.
+# ============================================================================
+FROM redis/redis-stack:latest
+
+LABEL org.opencontainers.image.title="UnifiedMultiAgent - Redis"
+LABEL org.opencontainers.image.description="Redis Stack with vector search modules and cached data"
+LABEL maintainer="ranaankur39"
+
+# Copy the RDB snapshot so Redis loads existing data on first boot.
+# If a volume is mounted at /data it will override this file after first start.
+COPY redis_dump.rdb /data/dump.rdb
+
+# redis-stack exposes 6379 (Redis) and 8001 (RedisInsight)
+EXPOSE 6379 8001

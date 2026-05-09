@@ -1,0 +1,19 @@
+# ============================================================================
+# Custom Postgres image with warehouse_db schema + data baked in
+# Base: postgres:16-alpine
+# The warehouse_dump.sql is a full pg_dump that includes schema + all data.
+# On first start with an empty volume, Postgres runs all *.sql files in
+# docker-entrypoint-initdb.d/ alphabetically.
+# ============================================================================
+FROM postgres:16-alpine
+
+LABEL org.opencontainers.image.title="UnifiedMultiAgent - Postgres"
+LABEL org.opencontainers.image.description="Warehouse DB with schema and seed data baked in"
+LABEL maintainer="ranaankur39"
+
+# Copy the full database dump into the init directory.
+# Postgres runs these scripts only when the data directory is empty (first boot).
+COPY init/warehouse_dump.sql /docker-entrypoint-initdb.d/01_warehouse_dump.sql
+
+# Expose standard Postgres port
+EXPOSE 5432

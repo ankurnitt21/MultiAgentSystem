@@ -1,0 +1,28 @@
+# Docker ignore — keeps image small and avoids leaking secrets
+.env
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+venv/
+.venv/
+.venv*
+
+# Docker build context exclusions
+docker/
+
+# Test files
+test_*.py
+
+# IDE
+.vscode/
+.idea/
+
+# Markdown (optional — remove if you want them in the image)
+*.md
+
+# Logs
+*.log
+logs/
