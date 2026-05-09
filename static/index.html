@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Multi-Agent System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+        .chat-container { max-height: calc(100vh - 220px); overflow-y: auto; }
+        .msg-user { background: #1e3a5f; border-left: 3px solid #3b82f6; }
+        .msg-assistant { background: #1a2332; border-left: 3px solid #10b981; }
+        .msg-error { background: #2d1b1b; border-left: 3px solid #ef4444; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+        .badge-rag { background: #7c3aed33; color: #a78bfa; }
+        .badge-sql { background: #3b82f633; color: #60a5fa; }
+        .badge-action { background: #f59e0b33; color: #fbbf24; }
+        .badge-compound { background: #10b98133; color: #34d399; }
+        .badge-cache { background: #06b6d433; color: #22d3ee; }
+        .step-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; margin: 4px 0; }
+        .approval-card { background: #1e293b; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px; }
+        pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; }
+        code { color: #38bdf8; }
+        .spinner { border: 3px solid #334155; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #query-input:focus { outline: none; box-shadow: 0 0 0 2px #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="max-w-5xl mx-auto p-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Unified Multi-Agent System</h1>
+                <p class="text-sm text-slate-400">RAG + SQL + Action | LLM-driven Supervisor | Parallel Execution</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" id="stream-toggle" checked class="rounded">
+                    <span>Stream</span>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" id="approval-toggle" class="rounded">
+                    <span>SQL Approval</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Chat -->
+        <div id="chat" class="chat-container space-y-3 mb-4 p-2"></div>
+
+        <!-- Steps (streaming) -->
+        <div id="steps" class="space-y-1 mb-4"></div>
+
+        <!-- Input -->
+        <div class="flex gap-2">
+            <input id="query-input" type="text" placeholder="Ask anything... (RAG, SQL, or Action)"
+                   class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white"
+                   onkeydown="if(event.key==='Enter')sendQuery()">
+            <button onclick="sendQuery()"
+                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold text-white transition">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API = '';
+        let currentThreadId = '';
+        let sessionId = 'session-' + Math.random().toString(36).slice(2, 10);
+
+        function addMsg(role, content, extra = '') {
+            const chat = document.getElementById('chat');
+            const cls = role === 'user' ? 'msg-user' : (role === 'error' ? 'msg-error' : 'msg-assistant');
+            const div = document.createElement('div');
+            div.className = `${cls} rounded-lg p-4 text-sm whitespace-pre-wrap`;
+            div.innerHTML = `<div class="font-semibold mb-1 text-xs uppercase text-slate-400">${role}</div>${extra}${content}`;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function addStep(node, data) {
+            const steps = document.getElementById('steps');
+            const div = document.createElement('div');
+            div.className = 'step-card text-xs';
+            let badge = '';
+            if (data.intent) badge = `<span class="badge badge-${data.intent}">${data.intent.toUpperCase()}</span> `;
+            if (data.cache_hit) badge += `<span class="badge badge-cache">CACHE HIT</span> `;
+            let info = '';
+            if (data.sql) info += `<pre><code>${data.sql}</code></pre>`;
+            if (data.error) info += `<span class="text-red-400">${data.error}</span>`;
+            div.innerHTML = `<span class="text-slate-400">${node}</span> ${badge}${info}`;
+            steps.appendChild(div);
+        }
+
+        function clearSteps() {
+            document.getElementById('steps').innerHTML = '';
+        }
+
+        async function sendQuery() {
+            const input = document.getElementById('query-input');
+            const query = input.value.trim();
+            if (!query) return;
+            input.value = '';
+            addMsg('user', query);
+            clearSteps();
+
+            const useStream = document.getElementById('stream-toggle').checked;
+            const requireApproval = document.getElementById('approval-toggle').checked;
+
+            const body = { query, session_id: sessionId, require_approval: requireApproval };
+
+            if (useStream) {
+                await streamQuery(body);
+            } else {
+                await syncQuery(body);
+            }
+        }
+
+        async function syncQuery(body) {
+            try {
+                const res = await fetch(`${API}/api/query`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                handleResponse(data);
+            } catch (e) {
+                addMsg('error', `Error: ${e.message}`);
+            }
+        }
+
+        async function streamQuery(body) {
+            try {
+                const res = await fetch(`${API}/api/query/stream`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.node === 'DONE') {
+                                    handleResponse(data.response);
+                                } else if (data.node === 'ERROR') {
+                                    addMsg('error', data.error);
+                                } else {
+                                    addStep(data.node, data);
+                                    // Handle interrupts
+                                    if (data.status === 'awaiting_clarification') {
+                                        showClarification(data);
+                                    }
+                                    if (data.pending_tool_call && Object.keys(data.pending_tool_call).length > 0) {
+                                        showToolApproval(data.pending_tool_call);
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (e) {
+                addMsg('error', `Stream error: ${e.message}`);
+            }
+        }
+
+        function handleResponse(data) {
+            currentThreadId = data.thread_id || '';
+            let badge = '';
+            if (data.intent) badge = `<span class="badge badge-${data.intent}">${data.intent.toUpperCase()}</span> `;
+            if (data.cache_hit) badge += `<span class="badge badge-cache">CACHE</span> `;
+
+            if (data.status === 'awaiting_clarification') {
+                showClarification(data);
+                return;
+            }
+            if (data.status === 'awaiting_approval') {
+                showSQLApproval(data);
+                return;
+            }
+            if (data.status === 'awaiting_tool_approval') {
+                showToolApproval(data.pending_tool_call);
+                return;
+            }
+
+            let content = data.final_answer || data.rag_answer || data.sql_explanation || data.react_result || data.error || 'No response.';
+
+            if (data.generated_sql) {
+                content += `\n\n<pre><code>${data.generated_sql}</code></pre>`;
+            }
+            if (data.sql_results && data.sql_results.length > 0) {
+                content += `\n\nResults (${data.sql_results.length} rows):\n<pre>${JSON.stringify(data.sql_results.slice(0, 5), null, 2)}</pre>`;
+            }
+            if (data.react_steps && data.react_steps.length > 0) {
+                content += '\n\n**Action Steps:**\n';
+                data.react_steps.forEach(s => {
+                    content += `• Step ${s.step}: ${s.tool} → ${s.success ? '✓' : '✗'} ${s.message}\n`;
+                });
+            }
+
+            addMsg('assistant', content, badge);
+
+            // Feedback buttons
+            if (data.run_id) {
+                const chat = document.getElementById('chat');
+                const fb = document.createElement('div');
+                fb.className = 'flex gap-2 mt-1';
+                fb.innerHTML = `
+                    <button onclick="sendFeedback('${data.run_id}', 1)" class="text-xs bg-green-900 hover:bg-green-800 px-3 py-1 rounded">👍</button>
+                    <button onclick="sendFeedback('${data.run_id}', -1)" class="text-xs bg-red-900 hover:bg-red-800 px-3 py-1 rounded">👎</button>
+                `;
+                chat.appendChild(fb);
+            }
+        }
+
+        function showClarification(data) {
+            let html = `<div class="approval-card"><p class="mb-2">${data.clarification_message}</p>`;
+            (data.clarification_options || []).forEach(opt => {
+                html += `<button onclick="submitClarification('${opt.query.replace(/'/g, "\\'")}')" class="block w-full text-left bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded mb-1 text-sm">${opt.index}. ${opt.query}</button>`;
+            });
+            html += '</div>';
+            addMsg('assistant', html, '<span class="badge badge-sql">CLARIFICATION</span> ');
+        }
+
+        function showSQLApproval(data) {
+            const html = `<div class="approval-card">
+                <p class="font-semibold mb-2">SQL Approval Required</p>
+                <pre><code>${data.generated_sql}</code></pre>
+                <p class="text-sm mt-2">Confidence: ${(data.sql_confidence * 100).toFixed(0)}%</p>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="submitApproval(true)" class="bg-green-700 hover:bg-green-600 px-4 py-2 rounded font-semibold">Approve</button>
+                    <button onclick="submitApproval(false)" class="bg-red-700 hover:bg-red-600 px-4 py-2 rounded font-semibold">Reject</button>
+                </div>
+            </div>`;
+            addMsg('assistant', html, '<span class="badge badge-sql">APPROVAL</span> ');
+        }
+
+        function showToolApproval(tool) {
+            const html = `<div class="approval-card">
+                <p class="font-semibold mb-2">Tool Approval Required</p>
+                <p><strong>Tool:</strong> ${tool.tool_name}</p>
+                <p><strong>Args:</strong> <code>${JSON.stringify(tool.tool_args)}</code></p>
+                <p class="text-sm text-slate-400 mt-1">${tool.reasoning || ''}</p>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="submitActionApproval(true)" class="bg-green-700 hover:bg-green-600 px-4 py-2 rounded font-semibold">Approve</button>
+                    <button onclick="submitActionApproval(false)" class="bg-red-700 hover:bg-red-600 px-4 py-2 rounded font-semibold">Reject</button>
+                </div>
+            </div>`;
+            addMsg('assistant', html, '<span class="badge badge-action">TOOL APPROVAL</span> ');
+        }
+
+        async function submitClarification(query) {
+            const body = { session_id: sessionId, selected_query: query, thread_id: currentThreadId };
+            const res = await fetch(`${API}/api/clarify`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            handleResponse(await res.json());
+        }
+
+        async function submitApproval(approved) {
+            const body = { session_id: sessionId, approved, thread_id: currentThreadId };
+            const res = await fetch(`${API}/api/approve`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            handleResponse(await res.json());
+        }
+
+        async function submitActionApproval(approved) {
+            const body = { session_id: sessionId, approved, thread_id: currentThreadId };
+            const res = await fetch(`${API}/api/action/approve`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            handleResponse(await res.json());
+        }
+
+        async function sendFeedback(runId, rating) {
+            await fetch(`${API}/api/feedback`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: sessionId, run_id: runId, rating }),
+            });
+        }
+    </script>
+</body>
+</html>

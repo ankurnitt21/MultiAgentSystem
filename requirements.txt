@@ -1,0 +1,52 @@
+# ============================================================================
+# Unified Multi-Agent System - Python Dependencies
+# ============================================================================
+
+# ─── Web Framework ──────────────────────────────────────────────────────────
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+
+# ─── LangChain + LangGraph ─────────────────────────────────────────────────
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-groq>=0.2.0
+langgraph>=0.4.0
+langgraph-checkpoint-postgres>=2.0.0
+
+# ─── Pinecone Vector Store ──────────────────────────────────────────────────
+pinecone>=9.0.0
+
+# ─── Database ───────────────────────────────────────────────────────────────
+sqlalchemy==2.0.35
+psycopg[binary]==3.2.3
+psycopg2-binary==2.9.9
+
+# ─── Redis (with vector search) ────────────────────────────────────────────
+redis[hiredis]==5.1.0
+
+# ─── Embeddings (ONNX) ─────────────────────────────────────────────────────
+fastembed==0.4.1
+
+# ─── Guardrails AI ─────────────────────────────────────────────────────────
+guardrails-ai>=0.5.10
+
+# ─── RAGAS Evaluation ──────────────────────────────────────────────────────
+ragas>=0.2.6
+datasets>=3.1.0
+langchain-openai>=0.2.0
+
+# ─── Observability ──────────────────────────────────────────────────────────
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp-proto-http==1.27.0
+
+# ─── Config & Logging ──────────────────────────────────────────────────────
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+structlog==24.4.0
+
+# ─── Utilities ──────────────────────────────────────────────────────────────
+numpy==1.26.4
+tiktoken==0.7.0
+httpx==0.27.2

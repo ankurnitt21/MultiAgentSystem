@@ -1,0 +1,74 @@
+{
+  "domains": {
+    "HR": {
+      "source": "hr_policy_2024.pdf",
+      "chunks": [
+        {
+          "content": "Annual Leave: All full-time employees are entitled to 24 days of paid annual leave per calendar year. Leave accrues at 2 days per month. Unused leave can be carried forward up to 5 days into the next year. Leave requests must be submitted at least 2 weeks in advance for periods longer than 3 days."
+        },
+        {
+          "content": "Sick Leave: Employees receive 12 days of paid sick leave per year. A medical certificate is required for absences exceeding 3 consecutive days. Unused sick leave does not carry forward. Part-time employees receive pro-rated sick leave based on their contracted hours."
+        },
+        {
+          "content": "Maternity & Paternity Leave: Female employees are entitled to 16 weeks of paid maternity leave. Male employees receive 4 weeks of paid paternity leave. Both must be taken within 12 months of the child's birth. Additional unpaid leave of up to 6 months may be requested."
+        },
+        {
+          "content": "Work From Home Policy: Employees may work from home up to 3 days per week with manager approval. A stable internet connection and dedicated workspace are required. Core hours of 10 AM - 4 PM must be observed for meetings and collaboration."
+        },
+        {
+          "content": "Base Salary Structure: Salaries are reviewed annually in March. Pay bands are organized by job level: Junior (L1-L3), Senior (L4-L6), Management (L7-L9), Executive (L10+). Each level has a salary range with 25th, 50th, and 75th percentile benchmarks."
+        },
+        {
+          "content": "Health Insurance: The company provides comprehensive health insurance covering medical, dental, and vision care. Family coverage is available with employee contribution of 20%. Annual deductible is $500 individual / $1500 family. Mental health services are fully covered."
+        },
+        {
+          "content": "Retirement Benefits: 401(k) plan with company match of 100% on first 3% and 50% on next 2% of salary. Employees are eligible after 90 days of employment. Vesting schedule: 25% per year over 4 years. Financial planning consultations are available quarterly."
+        },
+        {
+          "content": "Performance Reviews: Annual performance reviews are conducted in Q1 each year. Reviews use a 5-point scale: Exceeds Expectations, Meets Expectations, Developing, Needs Improvement, Unsatisfactory. Managers must provide written feedback and development goals."
+        },
+        {
+          "content": "Training & Development: Each employee has an annual training budget of $2,500. Approved certifications are fully reimbursed. Internal knowledge sharing sessions are held monthly. Employees can request up to 5 days of study leave per year for professional development."
+        }
+      ]
+    },
+    "PRODUCT": {
+      "source": "product_catalog.pdf",
+      "chunks": [
+        {
+          "content": "Product Line Overview: Our warehouse manages products across 5 categories: Electronics, Furniture, Safety Equipment, Packaging, and Food & Beverage. Each product has SKU, cost price, selling price, and reorder levels defined. Seasonal demand patterns affect inventory planning."
+        },
+        {
+          "content": "Pricing Strategy: Products are priced using cost-plus methodology with target margins of 25-40% depending on category. Volume discounts are available: 5% for 100+ units, 10% for 500+ units, 15% for 1000+ units. Special pricing requires management approval."
+        },
+        {
+          "content": "Inventory Management: Reorder points are set per product based on historical demand and supplier lead times. Safety stock levels are maintained at 2 weeks of average demand. ABC analysis categorizes products: A items (top 20% by value) get daily monitoring."
+        },
+        {
+          "content": "Shipping & Fulfillment: Orders are fulfilled from the nearest warehouse with available stock. Same-day shipping is available for orders placed before 2 PM. Free shipping on orders over $500. Hazmat items require special carrier certification."
+        }
+      ]
+    },
+    "AI": {
+      "source": "ai_ml_guide.pdf",
+      "chunks": [
+        {
+          "content": "RAG Architecture: Retrieval-Augmented Generation combines document retrieval with LLM generation. Key components: Vector embeddings (dense retrieval), BM25 (sparse retrieval), Reciprocal Rank Fusion (hybrid combining). Best practice: chunk documents at 300-500 tokens with 50-token overlap."
+        },
+        {
+          "content": "LangGraph Patterns: LangGraph enables building stateful multi-agent systems. Key patterns: Supervisor agent (orchestration), ReAct agent (reasoning + acting), Parallel execution (concurrent tasks), Human-in-the-loop (interrupt/resume). State is managed via TypedDict and checkpointed to PostgreSQL."
+        },
+        {
+          "content": "Prompt Engineering: Effective prompts use structured output (JSON), few-shot examples, and chain-of-thought reasoning. System prompts should be versioned and stored in databases. Dynamic prompts improve maintainability. Temperature 0 for deterministic outputs, 0.7 for creative tasks."
+        },
+        {
+          "content": "Vector Databases: Purpose-built databases for similarity search on high-dimensional vectors. Popular options: Pinecone (managed), Weaviate, Milvus, pgvector. Key metrics: recall@k, latency, throughput. Index types: HNSW (fast approximate), IVF (memory efficient), flat (exact)."
+        },
+        {
+          "content": "Multi-Agent Systems: Architectures where multiple specialized AI agents collaborate. Patterns include: supervisor-worker (one agent delegates), peer-to-peer (agents communicate directly), hierarchical (multi-level delegation). LangGraph provides native support for all patterns with state management."
+        }
+      ]
+    }
+  },
+  "upload_instructions": "Use POST /api/documents/upload with {domain, chunks: [{content, source}], source} for each domain."
+}

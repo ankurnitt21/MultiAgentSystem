@@ -1,0 +1,57 @@
+name: unified-multi-agent
+
+services:
+  # --- SQL Database (Warehouse + Checkpoints + Prompts + Conversations) ---
+  sql-postgres:
+    image: postgres:16-alpine
+    container_name: unified-sql-postgres
+    environment:
+      POSTGRES_DB: warehouse_db
+      POSTGRES_USER: warehouse_admin
+      POSTGRES_PASSWORD: warehouse_secret_2024
+    ports:
+      - '5433:5432'
+    volumes:
+      - sql_postgres_data:/var/lib/postgresql/data
+      - ./init/sql_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U warehouse_admin -d warehouse_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- Redis Stack (Cache + Vector Search) ---
+  redis:
+    image: redis/redis-stack:latest
+    container_name: unified-redis
+    ports:
+      - '6379:6379'
+      - '8001:8001'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --- PgAdmin ---
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: unified-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - '5050:80'
+    depends_on:
+      - sql-postgres
+    restart: unless-stopped
+
+volumes:
+  sql_postgres_data:
+    driver: local
+  redis_data:
+    driver: local
